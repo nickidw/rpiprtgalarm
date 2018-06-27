@@ -3,9 +3,12 @@ import xml.etree.ElementTree as ET
 import RPi.GPIO as GPIO
 import time
 import sys
+import ssl
 
-server="18.223.216.13"
-urlpath="/getstatus.xml"
+username="username"
+password="password"
+server="server"
+urlpath="/api/getstatus.xml?id=0&username={}&password={}".format(username, password)
 relay_gpio=17
 noalarmsleep=60
 alarmtriggersleep=300
@@ -25,7 +28,8 @@ def makeanoise(pin,count,beepon,beepoff):
 
 def checkalarms():
 	try:
-		conn = http.client.HTTPConnection(server)
+		conn = http.client.HTTPSConnection(server,
+		context = ssl._create_unverified_context())
 		conn.request("GET", urlpath)
 		response = conn.getresponse()
 
@@ -60,7 +64,7 @@ while 1<2:
 	
 		while (alarmsactive == 1):
 			print("active alarms, making a noise!")
-			makeanoise(relay_gpio,10,0.1,0.1)
+			makeanoise(relay_gpio,5,0.5,0.5)
 			print("rechecking in {}s".format(rechecksleep))
 			time.sleep(rechecksleep)
 			alarmsactive = checkalarms()
