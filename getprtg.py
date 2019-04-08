@@ -5,10 +5,11 @@ import time
 import sys
 import ssl
 
-username="username"
-password="password"
-server="server"
-urlpath="/api/getstatus.xml?id=0&username={}&password={}".format(username, password)
+username=""
+passwordhash=""
+
+server=""
+urlpath="/api/getstatus.xml?id=0&username={}&passhash={}".format(username, passwordhash)
 relay_gpio=17
 noalarmsleep=60
 alarmtriggersleep=300
