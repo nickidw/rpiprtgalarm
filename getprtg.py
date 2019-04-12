@@ -72,7 +72,7 @@ while 1<2:
 			print("rechecking in {}s".format(rechecksleep))
 			time.sleep(rechecksleep)
 			alarmsactive = checkalarms()
-			duration = duration * 2
+			duration = duration + 2
 	elif (alarmsactive == -1):
 		print("Connection error")
 		makeanoise(relay_gpio, 0.1)
