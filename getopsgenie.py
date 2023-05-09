@@ -1,12 +1,12 @@
 import datetime
 import http.client
 import xml.etree.ElementTree as ET
-#import RPi.GPIO as GPIO
+import RPi.GPIO as GPIO
 import time
 import sys
 import ssl
 import requests
-import pandas
+#import pandas
 
 authorization = 'GenieKey '
 relay_gpio=12
@@ -15,22 +15,21 @@ alarmtriggersleep=300
 rechecksleep=30
 
 def makeanoise(pin,seconds):
-	# try:
-	# 	GPIO.setmode(GPIO.BOARD)
-	# 	GPIO.setup(pin, GPIO.OUT)
+	 try:
+	 	GPIO.setmode(GPIO.BOARD)
+	 	GPIO.setup(pin, GPIO.OUT)
 
-	# 	p = GPIO.PWM(pin, 5)  # channel=12 frequency=50Hz
-	# 	p.start(50)
-	# 	time.sleep(seconds)
-	# 	p.stop()
-	# finally:
-	# 	GPIO.cleanup()
-	return
+	 	p = GPIO.PWM(pin, 5)  # channel=12 frequency=50Hz
+	 	p.start(50)
+	 	time.sleep(seconds)
+	 	p.stop()
+	 finally:
+	 	GPIO.cleanup()
 
 def checkalarms():
 	try:
 		#Get time 10 minutes ago
-		timenow = datetime.datetime.now() - pandas.DateOffset(minutes=10)
+		timenow = datetime.datetime.now() - datetime.timedelta(minutes=10)
 		#convert to unix timestamp
 		tenminsago = int(round(time.mktime(timenow.timetuple()) * 1000))
 		
