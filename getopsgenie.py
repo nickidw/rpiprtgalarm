@@ -11,7 +11,7 @@ import config
 authorization = 'GenieKey ' + config.geniekey
 relay_gpio=12
 noalarmsleep=60
-alarmtriggersleep=300
+alarmtriggersleep=30
 rechecksleep=30
 
 def makeanoise(pin,seconds):
