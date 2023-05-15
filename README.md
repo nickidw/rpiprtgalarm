@@ -11,7 +11,7 @@ This logic pulses the buzzer on and off for 1 second with 0.1s durations, sleeps
 
 ## OpsGenie Installation
 * clone the repo
-* Copy rpiopsgeniealarm.service from <local cloned folder>/lib/systemd/system to /etc/systemd/system
+* Copy rpiopsgeniealarm.service from _local cloned folder_/lib/systemd/system to /etc/systemd/system
 * Create config.py in /home/pi with _geniekey="your OpsGenie key"_ as only content
 * Run _systemctl start rpiopsgeniealarm.service_
 * Run _systemctl enable rpiopsgeniealarm.service_
