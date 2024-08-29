@@ -29,12 +29,15 @@ def makeanoise(pin,seconds):
 def checkalarms():
 	try:
 		#Get time 10 minutes ago
-		timenow = datetime.datetime.now() - datetime.timedelta(minutes=10)
+		time10 = datetime.datetime.now() - datetime.timedelta(minutes=10)
+		#Get time 20 minutes ago
+		time20 = datetime.datetime.now() - datetime.timedelta(minutes=20)
 		#convert to unix timestamp
-		tenminsago = int(round(time.mktime(timenow.timetuple()) * 1000))
+		tenminsago = int(round(time.mktime(time10.timetuple()) * 1000))
+		twentyminsago = int(round(time.mktime(time20.timetuple()) * 1000))
 		
         #Check all open and unacknowledged alerts older than 10 minutes
-		url = "https://api.opsgenie.com/v2/alerts/count?query=status:%20open%20and%20acknowledged%20:%20false%20and%20createdAt%20%3C%20{}".format(tenminsago)
+		url = "https://api.opsgenie.com/v2/alerts/count?query=status%3A%20open%20and%20acknowledged%20%3A%20false%20and%20createdAt%20%3C%20{}%20and%20createdAt%20%3E%20{}".format(tenminsago, twentyminsago)
 		
 		response = requests.get(url, headers = {'Authorization': authorization})
 
