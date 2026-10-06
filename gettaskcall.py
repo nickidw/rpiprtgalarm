@@ -1,5 +1,4 @@
-import datetime
-import timezone
+from datetime import datetime, timedelta, timezone
 import http.client
 import xml.etree.ElementTree as ET
 import RPi.GPIO as GPIO
@@ -10,6 +9,7 @@ import requests
 import config
 
 authorization = 'token ' + config.api_key   # ← changed to TaskCall format
+ncentral_service_ref_id = 'Nh2UngdOT1uzqgUKhy1l9A'   # N-central service in TaskCall
 
 relay_gpio = 12
 noalarmsleep = 60
@@ -32,9 +32,9 @@ def checkalarms():
 
         now_utc = datetime.now(timezone.utc)
         # Get younger than time from config (closer to now)
-        time_newer = now_utc - datetime.timedelta(minutes=config.alertyoungerthan)
+        time_newer = now_utc - timedelta(minutes=config.alertyoungerthan)
         # Get older than time from config (farther back)
-        time_older = now_utc - datetime.timedelta(minutes=config.alertolderthan)
+        time_older = now_utc - timedelta(minutes=config.alertolderthan)
 
         # Format as TaskCall expects: string "YYYY-MM-DD HH:MM:SS" (UTC, no timezone)
         start_timestamp = time_older.strftime("%Y-%m-%d %H:%M:%S")   # start = older time
@@ -44,7 +44,8 @@ def checkalarms():
         url = "https://incidents-api.taskcallapp.com/incidents/list"
 
         payload = {
-            "status": "OPEN",
+            "status": "OPEN",                              
+            "service_ref_id": ncentral_service_ref_id,     
             "start_timestamp": start_timestamp,
             "end_timestamp": end_timestamp
         }
@@ -52,8 +53,8 @@ def checkalarms():
         response = requests.post(
             url,
             json=payload,
-            headers={'Authorization': authorization, 'Content-Type': 'application/json'}
-          
+            headers={'Authorization': authorization, 'Content-Type': 'application/json'},
+            timeout=30
         )
 
         if response.status_code != 200:
@@ -69,7 +70,7 @@ def checkalarms():
             return 1
         return 0
 
-    except ConnectionError:
+    except requests.exceptions.ConnectionError:
         print("Error: {}".format(sys.exc_info()[0]))
         return -1
     except Exception:
@@ -96,13 +97,15 @@ while 1 < 2:
     elif alarmsactive == -1:
         print("Connection error")
         makeanoise(relay_gpio, 0.1)
+        time.sleep(noalarmsleep)
     elif alarmsactive == -2:
         print("Other error")
         makeanoise(relay_gpio, 0.1)
+        time.sleep(noalarmsleep)
     elif alarmsactive == -3:
         print("Response code error")
         makeanoise(relay_gpio, 0.1)
+        time.sleep(noalarmsleep)
     else:
         print("No alarms, going to sleep for {}s".format(noalarmsleep))
         time.sleep(noalarmsleep)
-        
