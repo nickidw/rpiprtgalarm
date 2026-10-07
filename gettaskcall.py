@@ -37,8 +37,8 @@ def checkalarms():
         time_older = now_utc - timedelta(minutes=config.alertolderthan)
 
         # Format as TaskCall expects: string "YYYY-MM-DD HH:MM:SS" (UTC, no timezone)
-        start_timestamp = time_older.strftime("%Y-%m-%d %H:%M:%S")   # start = older time
-        end_timestamp   = time_newer.strftime("%Y-%m-%d %H:%M:%S")   # end   = newer time
+        start_timestamp   = time_newer.strftime("%Y-%m-%d %H:%M:%S")   # end   = newer time
+        end_timestamp = time_older.strftime("%Y-%m-%d %H:%M:%S")   # start = older time
 
 
         url = "https://incidents-api.taskcallapp.com/incidents/list"
