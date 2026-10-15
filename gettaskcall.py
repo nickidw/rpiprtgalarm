@@ -9,7 +9,12 @@ import requests
 import config
 
 authorization = 'token ' + config.api_key   # ← changed to TaskCall format
-ncentral_service_ref_id = 'Nh2UngdOT1uzqgUKhy1l9A'   # N-central service in TaskCall
+
+# TaskCall services to monitor (name: service_ref_id)
+services = {
+    "N-central":        "Nh2UngdOT1uzqgUKhy1l9A",
+    "PLUS":             "0j-Zq-GNQ8u74FcA0kdaLg",
+}
 
 relay_gpio = 12
 noalarmsleep = 60
@@ -43,31 +48,33 @@ def checkalarms():
 
         url = "https://incidents-api.taskcallapp.com/incidents/list"
 
-        payload = {
-            "status": "OPEN",                              
-            "service_ref_id": ncentral_service_ref_id,     
-            "start_timestamp": start_timestamp,
-            "end_timestamp": end_timestamp
-        }
+        for name, ref_id in services.items():
 
-        response = requests.post(
-            url,
-            json=payload,
-            headers={'Authorization': authorization, 'Content-Type': 'application/json'},
-            timeout=30
-        )
+            payload = {
+                "status": "OPEN",                              
+                "service_ref_id": ref_id,     
+                "start_timestamp": start_timestamp,
+                "end_timestamp": end_timestamp
+            }
 
-        if response.status_code != 200:
-            print("Got response {} from server".format(response.status_code))
-            return -3
+            response = requests.post(
+                url,
+                json=payload,
+                headers={'Authorization': authorization, 'Content-Type': 'application/json'},
+                timeout=30
+            )
 
-        data = response.json()
+            if response.status_code != 200:
+                print("Got response {} from server".format(response.status_code))
+                return -3
 
-        # TaskCall returns array of incidents → count how many
-        count = len(data) if isinstance(data, list) else 0
+            data = response.json()
 
-        if count != 0:
-            return 1
+            # TaskCall returns array of incidents → count how many
+            count = len(data) if isinstance(data, list) else 0
+
+            if count != 0:
+                return 1
         return 0
 
     except requests.exceptions.ConnectionError:
