@@ -9,7 +9,13 @@ import requests
 import config
 
 authorization = 'token ' + config.api_key   # ← changed to TaskCall format
-ncentral_service_ref_id = 'Nh2UngdOT1uzqgUKhy1l9A'   # N-central service in TaskCall
+
+# TaskCall services to monitor (name: service_ref_id)
+# To add a service later, add a line: "Name": "service_ref_id",
+services = {
+    "N-central":        "Nh2UngdOT1uzqgUKhy1l9A",
+    "PLUS":             "0j-Zq-GNQ8u74FcA0kdaLg",
+}
 
 relay_gpio = 12
 noalarmsleep = 60
@@ -28,54 +34,62 @@ def makeanoise(pin, seconds):
         GPIO.cleanup()
 
 def checkalarms():
-    try:
+    now_utc = datetime.now(timezone.utc)
+    # Get younger than time from config (closer to now)
+    time_newer = now_utc - timedelta(minutes=config.alertyoungerthan)
+    # Get older than time from config (farther back)
+    time_older = now_utc - timedelta(minutes=config.alertolderthan)
 
-        now_utc = datetime.now(timezone.utc)
-        # Get younger than time from config (closer to now)
-        time_newer = now_utc - timedelta(minutes=config.alertyoungerthan)
-        # Get older than time from config (farther back)
-        time_older = now_utc - timedelta(minutes=config.alertolderthan)
-
-        # Format as TaskCall expects: string "YYYY-MM-DD HH:MM:SS" (UTC, no timezone)
-        start_timestamp = time_older.strftime("%Y-%m-%d %H:%M:%S")   # start = older time
-        end_timestamp   = time_newer.strftime("%Y-%m-%d %H:%M:%S")   # end   = newer time
+    # Format as TaskCall expects: string "YYYY-MM-DD HH:MM:SS" (UTC, no timezone)
+    start_timestamp   = time_newer.strftime("%Y-%m-%d %H:%M:%S")   # start = now - alertyoungerthan
+    end_timestamp = time_older.strftime("%Y-%m-%d %H:%M:%S")   # end   = now - alertolderthan
 
 
-        url = "https://incidents-api.taskcallapp.com/incidents/list"
+    url = "https://incidents-api.taskcallapp.com/incidents/list"
+    error_code = 0
+    alarm_found = False
 
-        payload = {
-            "status": "OPEN",                              
-            "service_ref_id": ncentral_service_ref_id,     
-            "start_timestamp": start_timestamp,
-            "end_timestamp": end_timestamp
-        }
+    for name, ref_id in services.items():
+        try:
+            payload = {
+                "status": "OPEN",
+                "service_ref_id": ref_id,
+                "start_timestamp": start_timestamp,
+                "end_timestamp": end_timestamp
+            }
 
-        response = requests.post(
-            url,
-            json=payload,
-            headers={'Authorization': authorization, 'Content-Type': 'application/json'},
-            timeout=30
-        )
+            response = requests.post(
+                url,
+                json=payload,
+                headers={'Authorization': authorization, 'Content-Type': 'application/json'},
+                timeout=30
+            )
 
-        if response.status_code != 200:
-            print("Got response {} from server".format(response.status_code))
-            return -3
+            if response.status_code != 200:
+                print("{}: Got response {} from server".format(name, response.status_code))
+                error_code = -3
+                continue
 
-        data = response.json()
+            data = response.json()
 
-        # TaskCall returns array of incidents → count how many
-        count = len(data) if isinstance(data, list) else 0
+            # TaskCall returns array of incidents → count how many
+            count = len(data) if isinstance(data, list) else 0
 
-        if count != 0:
-            return 1
-        return 0
+            if count != 0:
+                print("{}: {} open incident(s)".format(name, count))
+                alarm_found = True
+                break   # unacknowledged incident found → stop checking and beep now
 
-    except requests.exceptions.ConnectionError:
-        print("Error: {}".format(sys.exc_info()[0]))
-        return -1
-    except Exception:
-        print("Error: {}".format(sys.exc_info()[0]))
-        return -2
+        except requests.exceptions.ConnectionError:
+            print("{}: Error: {}".format(name, sys.exc_info()[0]))
+            error_code = -1
+        except Exception:
+            print("{}: Error: {}".format(name, sys.exc_info()[0]))
+            error_code = -2
+
+    if alarm_found:
+        return 1
+    return error_code
 
 makeanoise(relay_gpio, 0.2)
 
