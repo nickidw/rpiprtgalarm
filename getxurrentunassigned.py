@@ -34,8 +34,6 @@ def checkalarms():
         # Unassigned for longer than this many minutes (from config)
         cutoff = now_utc - timedelta(minutes=config.xurrent_unassigned_minutes)
 
-        url = xurrent_url
-
         # Let Xurrent do the filtering: no Member, created before the cutoff
         params = {
             "fields": "id,subject,requested_by,member,created_at",
@@ -44,33 +42,28 @@ def checkalarms():
             "created_at": "<" + cutoff.strftime("%Y-%m-%dT%H:%M:%SZ")
         }
 
-        while url:
-            response = requests.get(
-                url,
-                params=params,
-                headers={'Authorization': authorization, 'X-Xurrent-Account': config.xurrent_account},
-                timeout=30
-            )
+        response = requests.get(
+            xurrent_url,
+            params=params,
+            headers={'Authorization': authorization, 'X-Xurrent-Account': config.xurrent_account},
+            timeout=30
+        )
 
-            if response.status_code != 200:
-                print("Got response {} from server".format(response.status_code))
-                return -3
+        if response.status_code != 200:
+            print("Got response {} from server".format(response.status_code))
+            return -3
 
-            data = response.json()
+        data = response.json()
 
-            # Beep on the first unassigned request from the requester in config - no need to look further
-            for req in data:
-                requester = req.get('requested_by') or {}
-                if requester.get('name') != config.xurrent_user:
-                    continue
-                if req.get('member'):
-                    continue
-                print("Unassigned request {} - {}".format(req['id'], req.get('subject', '')))
-                return 1
-
-            # Xurrent returns 100 per page; follow the "next" link for more
-            url = response.links.get('next', {}).get('url')
-            params = None
+        # Beep on the first unassigned request from the requester in config - stop as soon as one is found
+        for req in data:
+            requester = req.get('requested_by') or {}
+            if requester.get('name') != config.xurrent_user:
+                continue
+            if req.get('member'):
+                continue
+            print("Unassigned request {} - {}".format(req['id'], req.get('subject', '')))
+            return 1
 
         return 0
 
