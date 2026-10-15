@@ -11,7 +11,6 @@ import config
 authorization = 'token ' + config.api_key   # ← changed to TaskCall format
 
 # TaskCall services to monitor (name: service_ref_id)
-# To add a service later, add a line: "Name": "service_ref_id",
 services = {
     "N-central":        "Nh2UngdOT1uzqgUKhy1l9A",
     "PLUS":             "0j-Zq-GNQ8u74FcA0kdaLg",
@@ -34,26 +33,26 @@ def makeanoise(pin, seconds):
         GPIO.cleanup()
 
 def checkalarms():
-    now_utc = datetime.now(timezone.utc)
-    # Get younger than time from config (closer to now)
-    time_newer = now_utc - timedelta(minutes=config.alertyoungerthan)
-    # Get older than time from config (farther back)
-    time_older = now_utc - timedelta(minutes=config.alertolderthan)
+    try:
 
-    # Format as TaskCall expects: string "YYYY-MM-DD HH:MM:SS" (UTC, no timezone)
-    start_timestamp   = time_newer.strftime("%Y-%m-%d %H:%M:%S")   # start = now - alertyoungerthan
-    end_timestamp = time_older.strftime("%Y-%m-%d %H:%M:%S")   # end   = now - alertolderthan
+        now_utc = datetime.now(timezone.utc)
+        # Get younger than time from config (closer to now)
+        time_newer = now_utc - timedelta(minutes=config.alertyoungerthan)
+        # Get older than time from config (farther back)
+        time_older = now_utc - timedelta(minutes=config.alertolderthan)
+
+        # Format as TaskCall expects: string "YYYY-MM-DD HH:MM:SS" (UTC, no timezone)
+        start_timestamp   = time_newer.strftime("%Y-%m-%d %H:%M:%S")   # end   = newer time
+        end_timestamp = time_older.strftime("%Y-%m-%d %H:%M:%S")   # start = older time
 
 
-    url = "https://incidents-api.taskcallapp.com/incidents/list"
-    error_code = 0
-    alarm_found = False
+        url = "https://incidents-api.taskcallapp.com/incidents/list"
 
-    for name, ref_id in services.items():
-        try:
+        for name, ref_id in services.items():
+
             payload = {
-                "status": "OPEN",
-                "service_ref_id": ref_id,
+                "status": "OPEN",                              
+                "service_ref_id": ref_id,     
                 "start_timestamp": start_timestamp,
                 "end_timestamp": end_timestamp
             }
@@ -66,9 +65,8 @@ def checkalarms():
             )
 
             if response.status_code != 200:
-                print("{}: Got response {} from server".format(name, response.status_code))
-                error_code = -3
-                continue
+                print("Got response {} from server".format(response.status_code))
+                return -3
 
             data = response.json()
 
@@ -76,20 +74,15 @@ def checkalarms():
             count = len(data) if isinstance(data, list) else 0
 
             if count != 0:
-                print("{}: {} open incident(s)".format(name, count))
-                alarm_found = True
-                break   # unacknowledged incident found → stop checking and beep now
+                return 1
+        return 0
 
-        except requests.exceptions.ConnectionError:
-            print("{}: Error: {}".format(name, sys.exc_info()[0]))
-            error_code = -1
-        except Exception:
-            print("{}: Error: {}".format(name, sys.exc_info()[0]))
-            error_code = -2
-
-    if alarm_found:
-        return 1
-    return error_code
+    except requests.exceptions.ConnectionError:
+        print("Error: {}".format(sys.exc_info()[0]))
+        return -1
+    except Exception:
+        print("Error: {}".format(sys.exc_info()[0]))
+        return -2
 
 makeanoise(relay_gpio, 0.2)
 
