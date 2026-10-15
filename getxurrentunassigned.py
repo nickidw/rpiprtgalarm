@@ -34,10 +34,12 @@ def checkalarms():
         # Unassigned for longer than this many minutes (from config)
         cutoff = now_utc - timedelta(minutes=config.xurrent_unassigned_minutes)
 
-        # Let Xurrent do the filtering: no Member, created before the cutoff
+        # Let Xurrent do all the filtering: requester is Ops Genie API User,
+        # no Member, created before the cutoff - only need 1 back
         params = {
             "fields": "id,subject,requested_by,member,created_at",
-            "per_page": 100,
+            "per_page": 1,
+            "requested_by": config.xurrent_user_id,
             "member": "",
             "created_at": "<" + cutoff.strftime("%Y-%m-%dT%H:%M:%SZ")
         }
@@ -55,14 +57,9 @@ def checkalarms():
 
         data = response.json()
 
-        # Beep on the first unassigned request from the requester in config - stop as soon as one is found
-        for req in data:
-            requester = req.get('requested_by') or {}
-            if requester.get('name') != config.xurrent_user:
-                continue
-            if req.get('member'):
-                continue
-            print("Unassigned request {} - {}".format(req['id'], req.get('subject', '')))
+        # Anything returned is an unassigned Ops Genie ticket - beep
+        if data:
+            print("Unassigned request {} - {}".format(data[0]['id'], data[0].get('subject', '')))
             return 1
 
         return 0
